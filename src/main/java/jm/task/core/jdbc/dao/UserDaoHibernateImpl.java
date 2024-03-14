@@ -7,6 +7,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import javax.persistence.Query;
+import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
@@ -32,7 +33,6 @@ public class UserDaoHibernateImpl implements UserDao {
                     "PRIMARY KEY (id));").addEntity(User.class);
             query.executeUpdate();
             session.getTransaction().commit();
-            session.close();
         } catch (HibernateException e) {
             System.err.println("Ошибка при создании таблицы. " + e.getMessage());
         }
@@ -45,7 +45,6 @@ public class UserDaoHibernateImpl implements UserDao {
             Query query = session.createSQLQuery("DROP TABLE IF EXISTS users").addEntity(User.class);
             query.executeUpdate();
             session.getTransaction().commit();
-            session.close();
         } catch (HibernateException e) {
             System.err.println("Ошибка при удалении таблицы. " + e.getMessage());
         }
@@ -58,7 +57,6 @@ public class UserDaoHibernateImpl implements UserDao {
             User user = new User(name, lastName, age);
             session.save(user);
             session.getTransaction().commit();
-            session.close();
             System.out.println("User с именем — " + name + " добавлен в базу данных");
         } catch (HibernateException e) {
             System.err.println("Ошибка при создании юзера. " + e.getMessage());
@@ -74,7 +72,6 @@ public class UserDaoHibernateImpl implements UserDao {
                 session.delete(user);
                 session.getTransaction().commit();
             }
-            session.close();
         } catch (HibernateException e) {
             System.err.println("Ошибка при удалении юзера. " + e.getMessage());
         }
@@ -85,13 +82,12 @@ public class UserDaoHibernateImpl implements UserDao {
         List<User> userList = new ArrayList<>();
         try (Session session = sessionFactory.openSession()) {
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(User.class);
+            CriteriaQuery<User> criteriaQuery = criteriaBuilder.createQuery(User.class);
             Root<User> root = criteriaQuery.from(User.class);
             criteriaQuery.select(root);
 
-            Query query = session.createQuery(criteriaQuery);
-            userList.addAll(query.getResultList());
-            session.close();
+            TypedQuery<User> typedQuery = session.createQuery(criteriaQuery);
+            userList.addAll(typedQuery.getResultList());
         } catch (HibernateException e) {
             System.err.println("Ошибка при получении таблицы. " + e.getMessage());
         }
@@ -102,12 +98,9 @@ public class UserDaoHibernateImpl implements UserDao {
     public void cleanUsersTable() {
         try (Session session = sessionFactory.openSession()) {
             session.getTransaction().begin();
-            List<User> userList = getAllUsers();
-            for (User user : userList) {
-                session.delete(user);
-            }
+            Query query = session.createQuery("delete from User");
+            query.executeUpdate();
             session.getTransaction().commit();
-            session.close();
         } catch (HibernateException e) {
             System.err.println("Ошибка при очистке таблицы. " + e.getMessage());
         }
